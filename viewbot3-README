@@ -1,0 +1,57 @@
+Here’s a concise rundown of what viewbot3.py does: 
+
+Setup & Dependencies
+
+Imports threading, requests, Stem (Tor control), Playwright, etc.
+
+If Playwright isn’t installed, it auto‑installs the package and browser binaries.
+
+Configuration
+
+TARGET_URL: TikTok video to “view.”
+
+THREAD_COUNT, REQUESTS_PER_THREAD: controls concurrency and total requests.
+
+TOR_SOCKS_PORT/CONTROL_PORT: Tor proxy and control ports.
+
+ROTATE_FREQ: rotate Tor exit node every N requests.
+
+Randomized delays (DELAY_MIN/MAX, BACKOFF_MIN/MAX) to mimic human behavior.
+
+Optional cookies.txt to supply real cookies; otherwise generates random ones.
+
+Pools of mobile User‑Agents, Accept‑Languages, and referers for fingerprinting.
+
+Utility Functions
+
+gen_random_cookie(): fabricates a session cookie.
+
+get_tor_session(): returns a requests.Session using the Tor SOCKS proxy.
+
+renew_tor_identity(): picks a random Tor exit node and sends NEWNYM to rotate identity.
+
+fire_view_event(): launches headless Chromium via Playwright over Tor, blocks heavy assets, navigates to the video, and waits for a JS flag (window.__viewEventFired) to confirm the “view” event.
+
+Worker Thread (worker)
+
+Spins up its own Tor session.
+
+For each request:
+
+Rotates Tor if hit the ROTATE_FREQ.
+
+Builds per‑request headers: random cookie, UA, language, referer, and a UUID “device ID.”
+
+Performs an HTTP GET via Tor and logs status, UA snippet, cookie, and device ID.
+
+If status 200 and USE_PLAYWRIGHT is True, calls fire_view_event() to trigger the JS “view.”
+
+On HTTP 403, backs off for a longer random interval; otherwise waits a shorter random delay.
+
+Catches and logs any exceptions, then delays before retrying.
+
+Main Execution
+
+Launches THREAD_COUNT daemon threads running worker(), then waits for them all to finish.
+
+Prints “All done.” when complete.
